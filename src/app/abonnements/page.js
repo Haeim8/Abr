@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
-export default function AbonnementsPage() {
-  const router = useRouter();
+// Composant qui utilise useSearchParams
+function AbonnementsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -308,5 +309,18 @@ export default function AbonnementsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Composant principal avec Suspense
+export default function AbonnementsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner border-t-4 border-indigo-500 rounded-full w-12 h-12 animate-spin"></div>
+      </div>
+    }>
+      <AbonnementsContent />
+    </Suspense>
   );
 }

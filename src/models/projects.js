@@ -1,28 +1,25 @@
 // src/models/projects.js
 import mongoose from 'mongoose';
 
-// Définition du schéma Project
+// Schéma pour le modèle Project
 const ProjectSchema = new mongoose.Schema({
   client: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  title: {
-    type: String,
-    required: true
+  title: { 
+    type: String, 
+    required: true 
   },
-  description: {
-    type: String
-  },
+  description: String,
   status: {
     type: String,
     enum: ['pending', 'in_progress', 'completed', 'cancelled'],
     default: 'pending'
   },
   serviceType: {
-    type: String,
-    required: true
+    type: String
   },
   quantity: {
     type: Number,
@@ -44,7 +41,39 @@ const ProjectSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Éviter l'erreur "Cannot overwrite model once compiled"
-const Project = mongoose.models.Project || mongoose.model('Project', ProjectSchema);
+// Schéma pour le modèle Quote
+const QuoteSchema = new mongoose.Schema({
+  project: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    required: true
+  },
+  professional: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  amount: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected'],
+    default: 'pending'
+  },
+  details: {
+    type: String
+  },
+  validUntil: {
+    type: Date
+  }
+}, { timestamps: true });
 
+// Créer les modèles avec vérification s'ils existent déjà
+const Project = mongoose.models.Project || mongoose.model('Project', ProjectSchema);
+const Quote = mongoose.models.Quote || mongoose.model('Quote', QuoteSchema);
+
+// Exporter les deux modèles
+export { Project, Quote };
 export default Project;
