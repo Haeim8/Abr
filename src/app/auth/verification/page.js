@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
@@ -9,6 +9,8 @@ import * as z from 'zod';
 import Link from 'next/link';
 
 // Schéma de validation pour la vérification
+
+
 const verificationSchema = z.object({
   idDocument: z.any()
     .refine(value => value?.length > 0, 'Pièce d\'identité requise')
@@ -45,7 +47,8 @@ const verificationSchema = z.object({
   acceptTerms: z.boolean().refine(val => val === true, 'Vous devez accepter les conditions'),
 });
 
-export default function VerificationPage() {
+// Composant qui utilise useSearchParams
+function VerificationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -517,5 +520,18 @@ export default function VerificationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Composant principal avec Suspense
+export default function VerificationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner border-t-4 border-indigo-500 rounded-full w-12 h-12 animate-spin"></div>
+      </div>
+    }>
+      <VerificationContent />
+    </Suspense>
   );
 }

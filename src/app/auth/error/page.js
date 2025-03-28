@@ -1,7 +1,6 @@
 'use client';
-
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 import Link from 'next/link';
 
 // Composant qui utilise useSearchParams
