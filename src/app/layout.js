@@ -7,8 +7,8 @@ import { AuthProvider } from '@/lib/Auth-provider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Khaja - Plateforme de mise en relation artisans et particuliers',
-  description: 'Khaja met en relation les professionnels et les particuliers pour tous vos projets de rénovation et d\'entretien.',
+  title: 'arb - Plateforme de mise en relation artisans et particuliers',
+  description: 'arb met en relation les professionnels et les particuliers pour tous vos projets de rénovation et d\'entretien.',
 };
 
 export default function RootLayout({ children }) {

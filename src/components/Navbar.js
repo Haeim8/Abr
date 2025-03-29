@@ -18,7 +18,7 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold">Khaja</span>
+              <span className="text-xl font-bold">Abr</span>
             </Link>
             <div className="hidden md:ml-6 md:flex md:space-x-4">
               <Link href="/" className="px-3 py-2 rounded-md hover:bg-indigo-700">
