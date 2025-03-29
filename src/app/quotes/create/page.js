@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiAlertTriangle, FiCheck, FiInfo } from 'react-icons/fi';
 
-export default function CreateQuote() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+function CreateQuoteContent() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
+    const searchParams = useSearchParams();
   
-  const jobId = searchParams.get('jobId') || '';
-  const clientId = searchParams.get('clientId') || '';
+    const jobId = searchParams.get('jobId') || '';
+    const clientId = searchParams.get('clientId') || '';
   
   const [project, setProject] = useState(null);
   const [client, setClient] = useState(null);
@@ -603,3 +603,14 @@ export default function CreateQuote() {
     </div>
   );
 }
+export default function CreateQuote() {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-500"></div>
+        </div>
+      }>
+        <CreateQuoteContent />
+      </Suspense>
+    );
+  }
