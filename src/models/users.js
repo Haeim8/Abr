@@ -26,9 +26,49 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['client', 'professional', 'admin'],
+    enum: ['client', 'professional', 'casual', 'admin'],
     default: 'client'
   },
+  // Champ pour distinguer le CEO des autres admins
+  isSuperAdmin: {
+    type: Boolean,
+    default: false
+  },
+  
+  // Permissions détaillées pour les administrateurs
+  permissions: {
+    users: {
+      view: { type: Boolean, default: true },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    professionals: {
+      view: { type: Boolean, default: true },
+      edit: { type: Boolean, default: false },
+      verify: { type: Boolean, default: false }
+    },
+    subscriptions: {
+      view: { type: Boolean, default: true },
+      edit: { type: Boolean, default: false }
+    },
+    rates: {
+      view: { type: Boolean, default: true },
+      edit: { type: Boolean, default: false }
+    },
+    transactions: {
+      view: { type: Boolean, default: true },
+      process: { type: Boolean, default: false }
+    },
+    disputes: {
+      view: { type: Boolean, default: true },
+      resolve: { type: Boolean, default: false }
+    },
+    reports: {
+      view: { type: Boolean, default: true },
+      export: { type: Boolean, default: false }
+    }
+  },
+  
   phone: {
     type: String,
     trim: true
@@ -153,6 +193,11 @@ const UserSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date
+  },
+  // Statut du compte (actif/inactif)
+  active: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -162,7 +207,7 @@ UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     next();
   }
-
+  
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

@@ -1,8 +1,37 @@
-// src/models/subscriptions.js
 import mongoose from 'mongoose';
 
+const transactionSchema = new mongoose.Schema({
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  amount: {
+    type: Number,
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['payment', 'refund', 'credit'],
+    required: true
+  },
+  description: String,
+  stripePaymentId: String
+});
+
+const serviceUsageSchema = new mongoose.Schema({
+  serviceId: {
+    type: String,
+    required: true
+  },
+  quantity: {
+    type: Number,
+    default: 0
+  },
+  lastUsed: Date
+});
+
 const SubscriptionSchema = new mongoose.Schema({
-  userId: {
+  clientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -12,99 +41,80 @@ const SubscriptionSchema = new mongoose.Schema({
     enum: ['forfait1', 'forfait2', 'forfait3', 'forfait4'],
     required: true
   },
-  status: {
-    type: String,
-    enum: ['active', 'canceled', 'suspended', 'pending'],
-    default: 'pending'
-  },
-  startDate: {
-    type: Date,
-    required: true,
-    default: Date.now
-  },
-  endDate: {
-    type: Date
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Plan'
   },
   amount: {
     type: Number,
     required: true
   },
-  // Information sur l'utilisation des tâches
-  tasksUsed: {
+  paymentMethod: {
+    type: String,
+    required: true
+  },
+  stripeSubscriptionId: String,
+  stripeCustomerId: String,
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project'
+  },
+  autoRenew: {
+    type: Boolean,
+    default: true
+  },
+  startDate: {
+    type: Date,
+    default: Date.now
+  },
+  endDate: {
+    type: Date,
+    required: true
+  },
+  lastPaymentDate: Date,
+  nextPaymentDate: Date,
+  status: {
+    type: String,
+    enum: ['active', 'suspended', 'cancelled', 'expired'],
+    default: 'active'
+  },
+  tasksUsedThisMonth: {
     type: Number,
     default: 0
   },
-  maxTasks: {
-    type: Number,
-    required: true
-  },
-  // Liste des tâches utilisées ce mois-ci
-  currentMonthTasks: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Project'
-  }],
-  // Renouvellement
-  renewalDate: {
-    type: Date
-  },
-  // Historique des paiements
-  paymentHistory: [{
-    amount: Number,
-    date: Date,
-    status: {
-      type: String,
-      enum: ['successful', 'failed', 'pending'],
-      default: 'pending'
-    },
-    transactionId: String
-  }],
-  // Stripe
-  stripeCustomerId: {
-    type: String
-  },
-  stripeSubscriptionId: {
-    type: String
-  },
-  paymentStatus: {
-    type: String,
-    enum: ['paid', 'unpaid', 'pending'],
-    default: 'pending'
-  },
-  // Dates de création et mise à jour
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+  servicesUsed: [serviceUsageSchema],
+  transactions: [transactionSchema]
+}, { timestamps: true });
 
-// Méthode pour vérifier si l'utilisateur peut encore faire des tâches ce mois-ci
-SubscriptionSchema.methods.canUseTask = function() {
-  return this.status === 'active' && this.tasksUsed < this.maxTasks;
+// Méthodes statiques
+SubscriptionSchema.statics.findActiveByUser = function(userId) {
+  return this.findOne({
+    clientId: userId,
+    status: 'active'
+  });
 };
 
-// Méthode pour calculer le nombre de tâches restantes
-SubscriptionSchema.methods.remainingTasks = function() {
-  return Math.max(0, this.maxTasks - this.tasksUsed);
+// Méthodes d'instance
+SubscriptionSchema.methods.getStats = function() {
+  const tasksPerPlan = {
+    'forfait1': 1,
+    'forfait2': 3,
+    'forfait3': 3,
+    'forfait4': 3
+  };
+  
+  const maxTasks = tasksPerPlan[this.plan] || 0;
+  const remainingTasks = Math.max(0, maxTasks - (this.tasksUsedThisMonth || 0));
+  
+  const today = new Date();
+  const nextResetDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  
+  return {
+    plan: this.plan,
+    remainingTasks,
+    maxTasks,
+    nextResetDate
+  };
 };
 
-// Méthode pour réinitialiser les tâches utilisées au début du mois
-SubscriptionSchema.methods.resetMonthlyTasks = function() {
-  this.tasksUsed = 0;
-  this.currentMonthTasks = [];
-  this.updatedAt = new Date();
-  return this.save();
-};
-
-// Fonction statique pour trouver l'abonnement actif d'un utilisateur
-SubscriptionSchema.statics.findActiveForUser = function(userId) {
-  return this.findOne({ userId, status: 'active' });
-};
-
-// Vérifier si le modèle existe déjà pour éviter les erreurs en mode développement avec hot-reload
-const Subscription = mongoose.models.Subscription || mongoose.model('Subscription', SubscriptionSchema);
-
-export default Subscription;
+export default mongoose.models.Subscription || mongoose.model('Subscription', SubscriptionSchema);

@@ -266,7 +266,14 @@ export default function AdminDashboard() {
   };
   
   // Sauvegarder les modifications de tarifs
-  const handleSaveRates = async () => {
+ // Sauvegarder les modifications de tarifs
+ const handleSaveRates = async () => {
+    // Vérification des permissions
+    if (!session.user.permissions?.rates?.edit && !session.user.isSuperAdmin) {
+      alert("Vous n'avez pas les permissions nécessaires pour modifier les tarifs.");
+      return;
+    }
+    
     try {
       setIsLoading(true);
       
@@ -324,12 +331,26 @@ export default function AdminDashboard() {
   };
   
   // Gestionnaire pour éditer un abonnement
+  // Gestionnaire pour éditer un abonnement
   const handleEditPlan = (plan) => {
+    // Vérification des permissions
+    if (!session.user.permissions?.subscriptions?.edit && !session.user.isSuperAdmin) {
+      alert("Vous n'avez pas les permissions nécessaires pour modifier les abonnements.");
+      return;
+    }
+    
     setEditingPlan({...plan});
   };
   
   // Gestionnaire pour éditer un service
-  const handleEditService = (service) => {
+  // Gestionnaire pour éditer un service
+const handleEditService = (service) => {
+    // Vérification des permissions
+    if (!session.user.permissions?.subscriptions?.edit && !session.user.isSuperAdmin) {
+      alert("Vous n'avez pas les permissions nécessaires pour modifier les services.");
+      return;
+    }
+    
     setEditingService({...service});
   };
   
@@ -343,10 +364,40 @@ export default function AdminDashboard() {
     alert('Fonctionnalité de génération de facture à implémenter');
   };
   
-  // Gérer la vérification d'un professionnel
-  const handleVerifyProfessional = (id, status) => {
-    alert(`Professionnel ${id} ${status ? 'vérifié' : 'refusé'}`);
+  const handleVerifyProfessional = async (id, status) => {
+    // Vérification des permissions
+    if (!session.user.permissions?.professionals?.verify && !session.user.isSuperAdmin) {
+      alert("Vous n'avez pas les permissions nécessaires pour vérifier les professionnels.");
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/admin/professionals/${id}/verify`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ verified: status }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Erreur lors de la vérification du professionnel');
+      }
+      
+      // Recharger les données
+      const updatedStats = await fetch('/api/admin/dashboard').then(res => res.json());
+      setStats(updatedStats);
+      
+      alert(`Professionnel ${id} ${status ? 'vérifié' : 'refusé'} avec succès`);
+    } catch (err) {
+      console.error('Erreur:', err);
+      alert('Une erreur est survenue lors de la vérification du professionnel');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
@@ -884,12 +935,14 @@ export default function AdminDashboard() {
               <div className="bg-white shadow rounded-lg overflow-hidden">
                 <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">Tarifs professionnels</h3>
-                  <button 
-                    onClick={() => setIsEditingRates(!isEditingRates)} 
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    {isEditingRates ? 'Annuler' : 'Modifier les tarifs'}
-                  </button>
+                  {(session.user.permissions?.rates?.edit || session.user.isSuperAdmin) && (
+                    <button 
+                       onClick={() => setIsEditingRates(!isEditingRates)} 
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                         >
+                        {isEditingRates ? 'Annuler' : 'Modifier les tarifs'}
+                   </button>
+                 )}
                 </div>
                 <div className="px-4 py-5 sm:p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1466,19 +1519,23 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button 
-                              onClick={() => handleVerifyProfessional('1', true)} 
-                              className="text-green-600 hover:text-green-900 mr-3"
-                            >
-                              Approuver
-                            </button>
-                            <button 
-                              onClick={() => handleVerifyProfessional('1', false)} 
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Refuser
-                            </button>
-                          </td>
+  {(session.user.permissions?.professionals?.verify || session.user.isSuperAdmin) && (
+    <>
+      <button 
+        onClick={() => handleVerifyProfessional('1', true)} 
+        className="text-green-600 hover:text-green-900 mr-3"
+      >
+        Approuver
+      </button>
+      <button 
+        onClick={() => handleVerifyProfessional('1', false)} 
+        className="text-red-600 hover:text-red-900"
+      >
+        Refuser
+      </button>
+    </>
+  )}
+</td>
                         </tr>
                         <tr>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -1517,19 +1574,23 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button 
-                              onClick={() => handleVerifyProfessional('2', true)} 
-                              className="text-green-600 hover:text-green-900 mr-3"
-                            >
-                              Approuver
-                            </button>
-                            <button 
-                              onClick={() => handleVerifyProfessional('2', false)} 
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Refuser
-                            </button>
-                          </td>
+  {(session.user.permissions?.professionals?.verify || session.user.isSuperAdmin) && (
+    <>
+      <button 
+        onClick={() => handleVerifyProfessional('2', true)} 
+        className="text-green-600 hover:text-green-900 mr-3"
+      >
+        Approuver
+      </button>
+      <button 
+        onClick={() => handleVerifyProfessional('2', false)} 
+        className="text-red-600 hover:text-red-900"
+      >
+        Refuser
+      </button>
+    </>
+  )}
+</td>
                         </tr>
                       </tbody>
                     </table>
@@ -2503,114 +2564,116 @@ export default function AdminDashboard() {
                 </div>
               </div>
               
-              <div className="bg-white shadow sm:rounded-lg">
-                <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Gestion des administrateurs</h3>
-                </div>
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="mb-6 flex justify-end">
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      Ajouter un administrateur
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Nom
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Email
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Rôle
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Statut
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Dernière connexion
-                          </th>
-                          <th scope="col" className="relative px-6 py-3">
-                            <span className="sr-only">Actions</span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200"></div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  Admin Principal
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">admin@khaja.com</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">Super Admin</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                              Actif
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            Maintenant
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button className="text-indigo-600 hover:text-indigo-900 mr-3">
-                              Éditer
-                            </button>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200"></div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  Admin Support
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">support@khaja.com</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">Support Admin</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                              Actif
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            02/03/2025 10:30
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button className="text-indigo-600 hover:text-indigo-900 mr-3">
-                              Éditer
-                            </button>
-                            <button className="text-red-600 hover:text-red-900">
-                              Désactiver
-                            </button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+            {session.user.isSuperAdmin && (
+  <div className="bg-white shadow sm:rounded-lg">
+    <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+      <h3 className="text-lg font-medium text-gray-900">Gestion des administrateurs</h3>
+    </div>
+    <div className="px-4 py-5 sm:p-6">
+      <div className="mb-6 flex justify-end">
+        <button
+          type="button"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          Ajouter un administrateur
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Nom
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Email
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Rôle
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Statut
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Dernière connexion
+              </th>
+              <th scope="col" className="relative px-6 py-3">
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            <tr>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200"></div>
+                  <div className="ml-4">
+                    <div className="text-sm font-medium text-gray-900">
+                      Admin Principal
+                    </div>
                   </div>
                 </div>
-              </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-500">admin@khaja.com</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-500">Super Admin</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                  Actif
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                Maintenant
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button className="text-indigo-600 hover:text-indigo-900 mr-3">
+                  Éditer
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200"></div>
+                  <div className="ml-4">
+                    <div className="text-sm font-medium text-gray-900">
+                      Admin Support
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-500">support@khaja.com</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-500">Support Admin</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                  Actif
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                02/03/2025 10:30
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button className="text-indigo-600 hover:text-indigo-900 mr-3">
+                  Éditer
+                </button>
+                <button className="text-red-600 hover:text-red-900">
+                  Désactiver
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+)}
             </div>
           )}
         </main>

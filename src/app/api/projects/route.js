@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { Project, Quote } from '@/models/projects';
+import User from '@/models/users';
+import notificationService from '@/lib/notificationService';
 
 export async function GET(request) {
   try {
@@ -119,6 +121,29 @@ export async function POST(request) {
     
     await newProject.save();
     console.log('Projet créé avec ID:', newProject._id);
+    
+    // Si le projet est publié, notifier les professionnels ayant la spécialité correspondante
+    if (body.status === 'published' || body.status === undefined) {
+      try {
+        // Trouver les professionnels correspondant à la catégorie
+        const professionals = await User.find({
+          role: 'professional',
+          'professional.specialties': { $regex: new RegExp(body.category, 'i') }
+        });
+        
+        console.log(`${professionals.length} professionnels trouvés pour la catégorie ${body.category}`);
+        
+        // Envoyer des notifications à chaque professionnel
+        for (const pro of professionals) {
+          await notificationService.notifyProfessionalQuoteRequest(pro._id, {
+            projectId: newProject._id,
+            category: body.category
+          });
+        }
+      } catch (notifError) {
+        console.error('Erreur lors de l\'envoi des notifications:', notifError);
+      }
+    }
     
     return NextResponse.json(
       { 

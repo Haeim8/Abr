@@ -2,7 +2,8 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import mongoose from 'mongoose';
-import { Quote } from '@/models/projects';
+import { Quote, Project } from '@/models/projects';
+import notificationService from '@/lib/notificationService';
 
 export async function GET(request) {
   try {
@@ -99,6 +100,15 @@ export async function POST(request) {
     // Connexion à la base de données
     await connectToDatabase();
     
+    // Récupérer le projet si nécessaire pour les notifications
+    let projectTitle = "Projet";
+    if (body.project) {
+      const project = await Project.findById(body.project);
+      if (project) {
+        projectTitle = project.title;
+      }
+    }
+    
     // Créer un nouveau devis
     const newQuote = new Quote({
       project: body.project,
@@ -120,6 +130,17 @@ export async function POST(request) {
     await newQuote.save();
     console.log('Devis créé avec ID:', newQuote._id);
     
+    // Envoyer une notification au client
+    try {
+      await notificationService.notifyClientQuoteReceived(body.client, {
+        quoteId: newQuote._id,
+        projectTitle: projectTitle
+      });
+      console.log('Notification envoyée au client');
+    } catch (notifError) {
+      console.error('Erreur lors de l\'envoi de la notification:', notifError);
+    }
+    
     return NextResponse.json(
       { 
         success: true, 
@@ -132,6 +153,75 @@ export async function POST(request) {
     console.error('Erreur lors de la création du devis:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la création du devis: ' + error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// Ajouter cette fonction pour gérer les mises à jour (acceptation de devis)
+export async function PUT(request) {
+  try {
+    const body = await request.json();
+    console.log('Requête PUT /api/quotes avec body:', body);
+    
+    if (!body.quoteId) {
+      return NextResponse.json(
+        { error: 'ID du devis requis' },
+        { status: 400 }
+      );
+    }
+    
+    await connectToDatabase();
+    
+    const quote = await Quote.findById(body.quoteId);
+    if (!quote) {
+      return NextResponse.json(
+        { error: 'Devis non trouvé' },
+        { status: 404 }
+      );
+    }
+    
+    // Mise à jour du statut
+    if (body.status) {
+      quote.status = body.status;
+      
+      // Si le devis est accepté, notifier le professionnel
+      if (body.status === 'accepted' && quote.professional) {
+        try {
+          // Récupérer le titre du projet
+          let projectTitle = "Projet";
+          if (quote.project) {
+            const project = await Project.findById(quote.project);
+            if (project) {
+              projectTitle = project.title;
+            }
+          }
+          
+          await notificationService.notifyQuoteAccepted(quote.professional, {
+            quoteId: quote._id,
+            projectTitle: projectTitle
+          });
+          console.log('Notification d\'acceptation envoyée au professionnel');
+        } catch (notifError) {
+          console.error('Erreur lors de l\'envoi de la notification:', notifError);
+        }
+      }
+    }
+    
+    await quote.save();
+    
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: 'Devis mis à jour avec succès',
+        quoteId: quote._id.toString()
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du devis:', error);
+    return NextResponse.json(
+      { error: 'Erreur lors de la mise à jour du devis: ' + error.message },
       { status: 500 }
     );
   }

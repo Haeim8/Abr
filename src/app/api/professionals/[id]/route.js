@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 export async function GET(request, { params }) {
   try {
-    const id = params.id;
+    const { id } = params;
     console.log(`Requête GET /api/professionals/${id}`);
     
     // Connexion à la base de données

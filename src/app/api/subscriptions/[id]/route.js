@@ -21,6 +21,14 @@ export async function GET(request, { params }) {
 
     const subscriptionId = params.id;
     
+    // Vérifier si on tente d'accéder à 'active' ou 'current' via le mauvais endpoint
+    if (subscriptionId === 'active' || subscriptionId === 'current') {
+      return NextResponse.json(
+        { error: 'Endpoint incorrect. Utilisez /api/subscriptions?mode=active au lieu de /api/subscriptions/active' },
+        { status: 400 }
+      );
+    }
+    
     // Connexion à la base de données
     await connectToDatabase();
     
@@ -69,6 +77,14 @@ export async function PUT(request, { params }) {
     }
 
     const subscriptionId = params.id;
+    
+    // Vérifier si on tente d'accéder à 'active' ou 'current' via le mauvais endpoint
+    if (subscriptionId === 'active' || subscriptionId === 'current') {
+      return NextResponse.json(
+        { error: 'Endpoint incorrect' },
+        { status: 400 }
+      );
+    }
     
     // Extraire les données de la requête
     const body = await request.json();
@@ -147,6 +163,14 @@ export async function DELETE(request, { params }) {
     }
 
     const subscriptionId = params.id;
+    
+    // Vérifier si on tente d'accéder à 'active' ou 'current' via le mauvais endpoint
+    if (subscriptionId === 'active' || subscriptionId === 'current') {
+      return NextResponse.json(
+        { error: 'Endpoint incorrect' },
+        { status: 400 }
+      );
+    }
     
     // Connexion à la base de données
     await connectToDatabase();
